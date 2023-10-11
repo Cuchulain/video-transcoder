@@ -1,14 +1,16 @@
 # Video Transcoder
 
-FFmpeg wrapper for automatically video parameters detect and transcoding
-
-The script is designed to automatically transcode a movie for playback from a flash drive on a TV.
+The script is designed to automatically transcode a movie for playback from a flash drive on a TV using **FFmpeg**.
 
 Based on the parameters set in the input file, it selects an audio stream in one of the preferred languages and adds "forced" subtitles in the same language if available.
 
 If audio in the preferred language is not available, it selects the default audio and adds subtitles in one of the preferred languages.
 
 If needed, it will reduce the number of audio channels and video resolution so that the TV can play it without stuttering or lagging.
+
+## Dependencies
+
+`ffmpeg` and `ffprobe` binaries installed in system path.
 
 ## Configuration
 
