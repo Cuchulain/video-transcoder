@@ -154,7 +154,7 @@ def get_language_title(language, stream_info=None):
     try:
         language_info = iso639.Language.from_part2b(language)
         return language_info.name
-    except iso639.UnknownLanguageError:
+    except iso639.LanguageNotFoundError:
         return default
 
 
