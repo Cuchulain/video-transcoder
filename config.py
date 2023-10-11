@@ -7,8 +7,8 @@ PATH = 'video-transcoder.toml'
 DEFAULT_VALUES = {
     'recoding': {
         'preferred_languages': {
-            'audio': ['cze', 'slo'],
-            'subtitles': ['cze', 'slo'],
+            'audio': ['eng', 'cze', 'slo'],
+            'subtitles': ['eng', 'cze', 'slo'],
         },
         'codecs': {
             'video': {
@@ -26,13 +26,13 @@ DEFAULT_VALUES = {
         },
         'dimensions': {
             'max': {
-                'width': 1366,
-                'height': 768,
+                'width': 1920,
+                'height': 1080,
             }
         },
         'quality': {
             'video': {
-                'parameter': '-b:v 1200k', # or '-q:v 50' for example
+                'parameter': '-b:v 1200k',  # or '-q:v 50' for example
             }
         },
     },

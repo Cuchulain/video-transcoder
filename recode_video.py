@@ -108,12 +108,13 @@ def get_ffmpeg_parameters(file_path, params):
 
     if subtitle_index is None:
         for lang in list(params['preferred_languages']['subtitles']):
-            if lang in subtitles and lang not in forced_subtitles and lang not in audios:
-                subtitle_index = subtitles[lang]
-                subtitle_title = get_language_title(
-                    lang,
-                    metadata['streams'][subtitle_index]
-                )
+            if lang in subtitles and lang not in forced_subtitles:
+                if lang not in audios:
+                    subtitle_index = subtitles[lang]
+                    subtitle_title = get_language_title(
+                        lang,
+                        metadata['streams'][subtitle_index]
+                    )
                 break
 
     if audio_index is not None:
@@ -203,4 +204,4 @@ if __name__ == "__main__":
 
     print("\nCall this command:\n{}\n".format(ffmpeg_command))
 
-    os.system(ffmpeg_command)
+    # os.system(ffmpeg_command)
