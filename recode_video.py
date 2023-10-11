@@ -204,4 +204,4 @@ if __name__ == "__main__":
 
     print("\nCall this command:\n{}\n".format(ffmpeg_command))
 
-    # os.system(ffmpeg_command)
+    os.system(ffmpeg_command)
