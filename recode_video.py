@@ -17,34 +17,11 @@ import pipes
 import platform
 import subprocess
 import sys
-
-PREFERRED_LANGUAGES_AUDIO = ['cze', 'slo']
-PREFERRED_LANGUAGES_SUBTITLES = ['cze', 'slo']
-
-LANGUAGE_NAMES = {
-    'cze': 'Czech',
-    'slo': 'Slovak',
-    'eng': 'English',
-}
-
-ALLOWED_VIDEO_CODECS = ['h264', 'mpeg4', 'mp4', 'libx264']
-FALLBACK_VIDEO_CODEC = 'h264_videotoolbox'
-
-ALLOWED_AUDIO_CODECS = ['aac', 'ac3', 'mp3']
-FALLBACK_AUDIO_CODEC = 'aac'
-
-ALLOWED_SUBTITLE_CODECS = ['subrip', 'ass']
-FALLBACK_SUBTITLE_CODEC = 'ass'
-
-MAX_WIDTH = 1366
-MAX_HEIGHT = 768
-VIDEO_QUALITY = '-b:v 1200k' # or '-q:v 50' for example
-
-OUTPUT_FILE_NAME_SUFFIX = 'recoded4tv'
-OUTPUT_FILE_EXTENSION = 'mkv'
+import config
+import iso639
 
 
-def get_ffmpeg_parameters(file_path):
+def get_ffmpeg_parameters(file_path, params):
     file_streams = get_file_metadata(file_path, 'streams')
     file_format = get_file_metadata(file_path, 'format')
     metadata = file_streams | file_format
@@ -85,20 +62,23 @@ def get_ffmpeg_parameters(file_path):
     new_width = width
     new_height = height
 
-    if height > MAX_HEIGHT:
+    if height > params['dimensions']['max']['height']:
         resize_video = True
-        new_height = MAX_HEIGHT
+        new_height = params['dimensions']['max']['height']
         new_width = int(width * (new_height / height))
 
-    if width > MAX_WIDTH:
+    if width > params['dimensions']['max']['width']:
         resize_video = True
-        new_width = MAX_WIDTH
+        new_width = params['dimensions']['max']['width']
         new_height = int(height * (new_width / width))
 
     recode_video = resize_video
 
-    if recode_video or metadata['streams'][video]['codec_name'] not in ALLOWED_VIDEO_CODECS:
-        recode_parameters.append("-c:v {} {}".format(FALLBACK_VIDEO_CODEC, VIDEO_QUALITY))
+    if recode_video or metadata['streams'][video]['codec_name'] not in params['codecs']['video']['allowed']:
+        recode_parameters.append("-c:v {} {}".format(
+            params['codecs']['video']['fallback'],
+            params['quality']['video']['parameter']
+        ))
     else:
         recode_parameters.append("-c:v copy")
 
@@ -114,7 +94,7 @@ def get_ffmpeg_parameters(file_path):
     )
     subtitle_title = None
 
-    for lang in list(PREFERRED_LANGUAGES_AUDIO):
+    for lang in list(params['preferred_languages']['audio']):
         if lang in audios:
             audio_index = audios[lang]
             audio_lang = lang
@@ -127,7 +107,7 @@ def get_ffmpeg_parameters(file_path):
             break
 
     if subtitle_index is None:
-        for lang in list(PREFERRED_LANGUAGES_SUBTITLES):
+        for lang in list(params['preferred_languages']['subtitles']):
             if lang in subtitles and lang not in audios:
                 subtitle_index = subtitles[lang]
                 subtitle_title = get_language_title(
@@ -145,8 +125,8 @@ def get_ffmpeg_parameters(file_path):
             recode_parameters.append('-filter:a "pan=stereo|c0=c2+0.30*c0+0.30*c4|c1=c2+0.30*c1+0.30*c5"')
             recode_audio = True
 
-        if recode_audio or metadata['streams'][audio_index]['codec_name'] not in ALLOWED_AUDIO_CODECS:
-            recode_parameters.append("-c:a {}".format(FALLBACK_AUDIO_CODEC))
+        if recode_audio or metadata['streams'][audio_index]['codec_name'] not in params['codecs']['audio']['allowed']:
+            recode_parameters.append("-c:a {}".format(params['codecs']['audio']['fallback']))
         else:
             recode_parameters.append("-c:a copy")
 
@@ -154,14 +134,12 @@ def get_ffmpeg_parameters(file_path):
         recode_parameters.append('-map 0:{} -disposition:s:0 default -metadata:s:s:0 title="{}"'
                                  .format(subtitle_index, subtitle_title))
 
-        if metadata['streams'][subtitle_index]['codec_name'] not in ALLOWED_SUBTITLE_CODECS:
-            recode_parameters.append("-c:s {}".format(FALLBACK_SUBTITLE_CODEC))
+        if metadata['streams'][subtitle_index]['codec_name'] not in params['codecs']['subtitle']['allowed']:
+            recode_parameters.append("-c:s {}".format(params['codecs']['subtitle']['fallback']))
         else:
             recode_parameters.append("-c:s copy")
 
-    parameters = " ".join(recode_parameters)
-
-    return parameters
+    return " ".join(recode_parameters)
 
 
 def get_language_title(language, stream_info=None):
@@ -173,9 +151,10 @@ def get_language_title(language, stream_info=None):
     if default is None:
         default = language
 
-    if language in LANGUAGE_NAMES:
-        return LANGUAGE_NAMES[language]
-    else:
+    try:
+        language_info = iso639.Language.from_part2b(language)
+        return language_info.name
+    except iso639.UnknownLanguageError:
         return default
 
 
@@ -206,14 +185,20 @@ def get_command(command, file_path):
 
 
 if __name__ == "__main__":
+    parameters = config.get_values()
+
     if len(sys.argv) != 2:
         print("Usage: {} <media_file>".format(os.path.basename(__file__)))
         sys.exit(1)
 
     input_file = sys.argv[1]
-    output_file = "{}-{}.{}".format(os.path.splitext(input_file)[0], OUTPUT_FILE_NAME_SUFFIX, OUTPUT_FILE_EXTENSION)
+    output_file = "{}-{}.{}".format(
+        os.path.splitext(input_file)[0],
+        parameters['files']['output']['suffix'],
+        parameters['files']['output']['extension']
+    )
 
-    ffmpeg_parameters = get_ffmpeg_parameters(input_file)
+    ffmpeg_parameters = get_ffmpeg_parameters(input_file, parameters['recoding'])
     ffmpeg_command = 'ffmpeg -i "{}" {} "{}"'.format(input_file, ffmpeg_parameters, output_file)
 
     print("\nCall this command:\n{}\n".format(ffmpeg_command))
