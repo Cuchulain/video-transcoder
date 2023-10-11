@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 
+"""
+    File name: recode_video.py
+    Author: Jan Čejka
+    GitHub: https://github.com/Cuchulain/video-transcoder
+    Email: posta@jancejka.cz
+    Website: https://jancejka.cz
+    Date created: 2023-10-09
+    Date last modified: 2023-10-11
+    Python Version: 3.9
+"""
+
 import json
 import os
 import pipes
