@@ -2,7 +2,7 @@ import os
 
 import toml
 
-PATH = 'video-transcoder.toml'
+CONFIG_FILE_NAME = 'video-transcoder.toml'
 
 DEFAULT_VALUES = {
     'recoding': {
@@ -13,7 +13,7 @@ DEFAULT_VALUES = {
         'codecs': {
             'video': {
                 'allowed': ['h264', 'mpeg4', 'mp4', 'libx264'],
-                'fallback': 'h264_videotoolbox',
+                'fallback': 'libx264',
             },
             'audio': {
                 'allowed': ['aac', 'ac3', 'mp3'],
@@ -21,7 +21,7 @@ DEFAULT_VALUES = {
             },
             'subtitle': {
                 'allowed': ['subrip', 'ass'],
-                'fallback': 'ass',
+                'fallback': 'subrip',
             }
         },
         'dimensions': {
@@ -32,7 +32,7 @@ DEFAULT_VALUES = {
         },
         'quality': {
             'video': {
-                'parameter': '-b:v 1200k',  # or '-q:v 50' for example
+                'parameter': '-b:v 3400k',  # or '-q:v 50' for example
             }
         },
     },
@@ -47,9 +47,10 @@ DEFAULT_VALUES = {
 
 def get_values():
     home_directory = os.path.expanduser('~')
-    full_path = os.path.join(home_directory, ".{}".format(PATH))
+    full_path = os.path.join(home_directory, ".{}".format(CONFIG_FILE_NAME))
 
     if not os.path.exists(full_path):
         toml.dump(DEFAULT_VALUES, open(full_path, 'w'))
+        print("The configuration file was not found, a new one was created here: {}".format(full_path))
 
     return toml.load(full_path)
