@@ -35,6 +35,7 @@ DEFAULT_VALUES = {
                 'parameter': '-b:v 3400k',  # or '-q:v 50' for example
             }
         },
+        'extra': '',
     },
     'files': {
         'output': {
@@ -53,4 +54,11 @@ def get_values():
         toml.dump(DEFAULT_VALUES, open(full_path, 'w'))
         print("The configuration file was not found, a new one was created here: {}".format(full_path))
 
-    return toml.load(full_path)
+    parameters = toml.load(full_path)
+
+    merged_parameters = parameters | DEFAULT_VALUES
+
+    if parameters != merged_parameters:
+        toml.dump(merged_parameters, open(full_path, 'w'))
+
+    return merged_parameters

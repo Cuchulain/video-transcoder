@@ -30,6 +30,7 @@ def get_ffmpeg_parameters(file_path, params):
     subtitles = {}
     forced_subtitles = {}
     default_audio = None
+    default_subtitles = None
     video = None
     index = 0
 
@@ -42,16 +43,20 @@ def get_ffmpeg_parameters(file_path, params):
             recode_parameters.append("-map 0:{}".format(index))
 
         if stream['codec_type'] == 'audio':
-            audios[stream['tags']['language']] = index
+            audios[get_stream_language(stream)] = index
             if default_audio is None:
                 default_audio = index
             if stream['disposition']['default']:
                 default_audio = index
 
         if stream['codec_type'] == 'subtitle':
-            subtitles[stream['tags']['language']] = index
+            subtitles[get_stream_language(stream)] = index
             if stream['disposition']['forced']:
-                forced_subtitles[stream['tags']['language']] = index
+                forced_subtitles[get_stream_language(stream)] = index
+            if default_subtitles is None:
+                default_subtitles = index
+            if stream['disposition']['default']:
+                default_subtitles = index
 
         index += 1
 
@@ -86,34 +91,38 @@ def get_ffmpeg_parameters(file_path, params):
         recode_parameters.append("-filter:v scale={}:{}".format(new_width, new_height))
 
     audio_index = default_audio
-    audio_lang = metadata['streams'][default_audio]['tags']['language']
-    subtitle_index = None
+    audio_lang = get_stream_language(metadata['streams'][default_audio])
+    subtitles_index = default_subtitles
+    subtitles_lang = get_stream_language(metadata['streams'][default_subtitles])
     audio_title = get_language_title(
         audio_lang,
         metadata['streams'][default_audio]
     )
-    subtitle_title = None
+    subtitles_title = get_language_title(
+        subtitles_lang,
+        metadata['streams'][default_subtitles]
+    )
 
     for lang in list(params['preferred_languages']['audio']):
         if lang in audios:
             audio_index = audios[lang]
             audio_lang = lang
             if audio_lang in forced_subtitles:
-                subtitle_index = forced_subtitles[lang]
-                subtitle_title = get_language_title(
+                subtitles_index = forced_subtitles[lang]
+                subtitles_title = get_language_title(
                     lang,
-                    metadata['streams'][subtitle_index]
+                    metadata['streams'][subtitles_index]
                 ) + ' (forced)'
             break
 
-    if subtitle_index is None:
+    if subtitles_index is None:
         for lang in list(params['preferred_languages']['subtitles']):
             if lang in subtitles and lang not in forced_subtitles:
                 if lang not in audios:
-                    subtitle_index = subtitles[lang]
-                    subtitle_title = get_language_title(
+                    subtitles_index = subtitles[lang]
+                    subtitles_title = get_language_title(
                         lang,
-                        metadata['streams'][subtitle_index]
+                        metadata['streams'][subtitles_index]
                     )
                 break
 
@@ -131,16 +140,23 @@ def get_ffmpeg_parameters(file_path, params):
         else:
             recode_parameters.append("-c:a copy")
 
-    if subtitle_index is not None:
+    if subtitles_index is not None:
         recode_parameters.append('-map 0:{} -disposition:s:0 default -metadata:s:s:0 title="{}"'
-                                 .format(subtitle_index, subtitle_title))
+                                 .format(subtitles_index, subtitles_title))
 
-        if metadata['streams'][subtitle_index]['codec_name'] not in params['codecs']['subtitle']['allowed']:
+        if metadata['streams'][subtitles_index]['codec_name'] not in params['codecs']['subtitle']['allowed']:
             recode_parameters.append("-c:s {}".format(params['codecs']['subtitle']['fallback']))
         else:
             recode_parameters.append("-c:s copy")
 
     return " ".join(recode_parameters)
+
+
+def get_stream_language(stream):
+    try:
+        return stream['tags']['language']
+    except KeyError:
+        return 'und'
 
 
 def get_language_title(language, stream_info=None):
@@ -200,7 +216,8 @@ if __name__ == "__main__":
     )
 
     ffmpeg_parameters = get_ffmpeg_parameters(input_file, parameters['recoding'])
-    ffmpeg_command = 'ffmpeg -i "{}" {} "{}"'.format(input_file, ffmpeg_parameters, output_file)
+    ffmpeg_command = ('ffmpeg -i "{}" {} {} "{}"'
+                      .format(input_file, ffmpeg_parameters, parameters['recoding']['extra'], output_file))
 
     print("\nCall this command:\n{}\n".format(ffmpeg_command))
 
