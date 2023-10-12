@@ -56,9 +56,22 @@ def get_values():
 
     parameters = toml.load(full_path)
 
-    merged_parameters = parameters | DEFAULT_VALUES
+    merged_parameters = merge_dicts(DEFAULT_VALUES, parameters)
 
     if parameters != merged_parameters:
         toml.dump(merged_parameters, open(full_path, 'w'))
 
     return merged_parameters
+
+
+def merge_dicts(tgt, enhancer):
+    for key, val in enhancer.items():
+        if key not in tgt:
+            tgt[key] = val
+            continue
+
+        if isinstance(val, dict):
+            merge_dicts(tgt[key], val)
+        else:
+            tgt[key] = val
+    return tgt
