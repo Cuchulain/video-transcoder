@@ -16,9 +16,9 @@ import os
 import pipes
 import platform
 import subprocess
-import sys
 import config
 import iso639
+import argparse
 
 
 def get_ffmpeg_parameters(file_path, params):
@@ -210,16 +210,23 @@ def get_command(command, file_path):
 if __name__ == "__main__":
     parameters = config.get_values()
 
-    if len(sys.argv) != 2:
-        print("Usage: {} <media_file>".format(os.path.basename(__file__)))
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Recode video')
 
-    input_file = sys.argv[1]
+    parser.add_argument('-n', '--dry-run', action='store_true', help='Only display the command, don\'t recode')
+    parser.add_argument('filename', type=str, help='Media file to recode')
+
+    args = parser.parse_args()
+
+    input_file = args.filename
     output_file = "{}-{}.{}".format(
         os.path.splitext(input_file)[0],
         parameters['files']['output']['suffix'],
         parameters['files']['output']['extension']
     )
+
+    if not os.path.exists(input_file):
+        print("File '{}' does not exist".format(input_file))
+        exit(1)
 
     ffmpeg_parameters = get_ffmpeg_parameters(input_file, parameters['recoding'])
     ffmpeg_command = ('ffmpeg -i "{}" {} {} "{}"'
@@ -227,4 +234,5 @@ if __name__ == "__main__":
 
     print("\nCall this command:\n{}\n".format(ffmpeg_command))
 
-    os.system(ffmpeg_command)
+    if not args.dry_run:
+        os.system(ffmpeg_command)
