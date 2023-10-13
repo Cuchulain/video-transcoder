@@ -38,27 +38,28 @@ def get_ffmpeg_parameters(file_path, params):
 
     for stream in metadata['streams']:
 
-        if stream['codec_type'] == 'video':
+        if stream['codec_type'] == 'video' and (video is None or stream['disposition'].get('default')):
             video = index
-            recode_parameters.append("-map 0:{}".format(index))
 
         if stream['codec_type'] == 'audio':
             audios[get_stream_language(stream)] = index
             if default_audio is None:
                 default_audio = index
-            if stream['disposition']['default']:
+            if stream['disposition'].get('default'):
                 default_audio = index
 
         if stream['codec_type'] == 'subtitle':
             subtitles[get_stream_language(stream)] = index
-            if stream['disposition']['forced']:
+            if stream['disposition']['forced'] or 'forced' in stream['tags'].get('title', '').lower():
                 forced_subtitles[get_stream_language(stream)] = index
             if default_subtitles is None:
                 default_subtitles = index
-            if stream['disposition']['default']:
+            if stream['disposition'].get('default'):
                 default_subtitles = index
 
         index += 1
+
+    recode_parameters.append("-map 0:{}".format(video))
 
     width = metadata['streams'][video]['width']
     height = metadata['streams'][video]['height']
@@ -92,21 +93,20 @@ def get_ffmpeg_parameters(file_path, params):
 
     audio_index = default_audio
     audio_lang = get_stream_language(metadata['streams'][default_audio])
-    subtitles_index = default_subtitles
-    subtitles_lang = get_stream_language(metadata['streams'][default_subtitles])
+    subtitles_index = None
+    subtitles_lang = None
     audio_title = get_language_title(
         audio_lang,
         metadata['streams'][default_audio]
     )
-    subtitles_title = get_language_title(
-        subtitles_lang,
-        metadata['streams'][default_subtitles]
-    )
+    has_preferred_audio = False
+    subtitles_title = None
 
     for lang in list(params['preferred_languages']['audio']):
         if lang in audios:
             audio_index = audios[lang]
             audio_lang = lang
+            has_preferred_audio = True
             if audio_lang in forced_subtitles:
                 subtitles_index = forced_subtitles[lang]
                 subtitles_title = get_language_title(
@@ -115,10 +115,10 @@ def get_ffmpeg_parameters(file_path, params):
                 ) + ' (forced)'
             break
 
-    if subtitles_index is None:
+    if not has_preferred_audio and subtitles_index is None:
         for lang in list(params['preferred_languages']['subtitles']):
             if lang in subtitles and lang not in forced_subtitles:
-                if lang not in audios:
+                if lang != audio_lang:
                     subtitles_index = subtitles[lang]
                     subtitles_title = get_language_title(
                         lang,
@@ -141,6 +141,12 @@ def get_ffmpeg_parameters(file_path, params):
             recode_parameters.append("-c:a copy")
 
     if subtitles_index is not None:
+        if subtitles_title is None:
+            subtitles_title = get_language_title(
+                subtitles_lang,
+                metadata['streams'][subtitles_index]
+            )
+
         recode_parameters.append('-map 0:{} -disposition:s:0 default -metadata:s:s:0 title="{}"'
                                  .format(subtitles_index, subtitles_title))
 
