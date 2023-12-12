@@ -95,10 +95,6 @@ def get_ffmpeg_parameters(file_path, params):
     audio_lang = get_stream_language(metadata['streams'][default_audio])
     subtitles_index = None
     subtitles_lang = None
-    audio_title = get_language_title(
-        audio_lang,
-        metadata['streams'][default_audio]
-    )
     has_preferred_audio = False
     subtitles_title = None
 
@@ -125,6 +121,11 @@ def get_ffmpeg_parameters(file_path, params):
                         metadata['streams'][subtitles_index]
                     )
                 break
+
+    audio_title = get_language_title(
+        audio_lang,
+        metadata['streams'][default_audio]
+    )
 
     if audio_index is not None:
         recode_parameters.append('-map 0:{} -metadata:s:a:0 title="{}"'
