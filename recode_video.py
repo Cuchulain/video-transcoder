@@ -71,12 +71,15 @@ def get_ffmpeg_parameters(file_path, params):
     if height > params['dimensions']['max']['height']:
         resize_video = True
         new_height = params['dimensions']['max']['height']
-        new_width = int(width * (new_height / height))
+        new_width = int(width * new_height / height)
 
     if width > params['dimensions']['max']['width']:
         resize_video = True
         new_width = params['dimensions']['max']['width']
-        new_height = int(height * (new_width / width))
+        new_height = int(height * new_width / width)
+        if new_height % 2 == 1:
+            new_width = int(new_width * (new_height + 1) / new_height)
+            new_height += 1
 
     recode_video = resize_video
 
