@@ -50,7 +50,7 @@ def get_ffmpeg_parameters(file_path, params):
 
         if stream['codec_type'] == 'subtitle':
             subtitles[get_stream_language(stream)] = index
-            if stream['disposition']['forced'] or 'forced' in stream['tags'].get('title', '').lower():
+            if stream.get('disposition', {}).get('forced', False) or 'forced' in stream.get('tags', {}).get('title', '').lower():
                 forced_subtitles[get_stream_language(stream)] = index
             if default_subtitles is None:
                 default_subtitles = index
@@ -172,8 +172,8 @@ def get_stream_language(stream):
 def get_language_title(language, stream_info=None):
     default = language
 
-    if stream_info is not None and 'title' in stream_info['tags']:
-        default = stream_info['tags']['title']
+    if stream_info is not None:
+        default = stream_info.get('tags', {}).get('title')
 
     if default is None:
         default = language
