@@ -16,6 +16,7 @@ import os
 import pipes
 import platform
 import subprocess
+import sys
 import config
 import iso639
 import argparse
@@ -217,26 +218,41 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Recode video')
 
     parser.add_argument('-n', '--dry-run', action='store_true', help='Only display the command, don\'t recode')
+    parser.add_argument('-f', '--force', action='store_true', help='Rewrite output file if it already exists')
     parser.add_argument('filename', type=str, help='Media file to recode')
+    parser.add_argument('outfilename', type=str, help='Recoded media file', nargs='?')
 
     args = parser.parse_args()
 
     input_file = args.filename
-    output_file = "{}-{}.{}".format(
-        os.path.splitext(input_file)[0],
-        parameters['files']['output']['suffix'],
-        parameters['files']['output']['extension']
-    )
+
+    if args.outfilename:
+        output_file = args.outfilename
+    else:
+        output_file = "{}-{}.{}".format(
+            os.path.splitext(input_file)[0],
+            parameters['files']['output']['suffix'],
+            parameters['files']['output']['extension']
+        )
 
     if not os.path.exists(input_file):
         print("File '{}' does not exist".format(input_file))
+        exit(1)
+
+    if os.path.exists(output_file) and not args.force:
+        print("File '{}' already exists".format(output_file))
         exit(1)
 
     ffmpeg_parameters = get_ffmpeg_parameters(input_file, parameters['recoding'])
     ffmpeg_command = ('ffmpeg -i "{}" {} {} "{}"'
                       .format(input_file, ffmpeg_parameters, parameters['recoding']['extra'], output_file))
 
+    if args.force:
+        ffmpeg_command = ffmpeg_command + ' -y'
+
     print("\nCall this command:\n{}\n".format(ffmpeg_command))
 
     if not args.dry_run:
-        os.system(ffmpeg_command)
+        result = subprocess.run(ffmpeg_command, shell=True, capture_output=True, text=True)
+        exit_code = result.returncode
+        sys.exit(exit_code)
