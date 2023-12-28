@@ -2,7 +2,7 @@ import os
 
 import toml
 
-CONFIG_FILE_NAME = 'video-transcoder.toml'
+CONFIG_FILE_NAME = '.video-transcoder.toml'
 
 DEFAULT_VALUES = {
     'recoding': {
@@ -42,13 +42,20 @@ DEFAULT_VALUES = {
             'suffix': 'recoded4tv',
             'extension': 'mkv',
         }
+    },
+    'logging': {
+        'to_console': True,
+        'to_file': False,
+        'file_path': 'recode.log',
+        'format': '%(asctime)s [%(levelname)s] %(message)s',
+        'level': 'ERROR',
     }
 }
 
 
 def get_values():
     home_directory = os.path.expanduser('~')
-    full_path = os.path.join(home_directory, ".{}".format(CONFIG_FILE_NAME))
+    full_path = os.path.join(home_directory, CONFIG_FILE_NAME)
 
     if not os.path.exists(full_path):
         toml.dump(DEFAULT_VALUES, open(full_path, 'w'))

@@ -20,6 +20,7 @@ import sys
 import config
 import iso639
 import argparse
+import logging
 
 
 def get_ffmpeg_parameters(file_path, params):
@@ -213,19 +214,49 @@ def get_command(command, file_path):
 
 
 if __name__ == "__main__":
-    parameters = config.get_values()
-
     parser = argparse.ArgumentParser(description='Recode video')
 
     parser.add_argument('-n', '--dry-run', action='store_true', help='Only display the command, don\'t recode')
     parser.add_argument('-f', '--force', action='store_true', help='Rewrite output file if it already exists')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+    parser.add_argument('-v', '--verbose', action='count', default=0, help='Verbose output')
     parser.add_argument('filename', type=str, help='Media file to recode')
     parser.add_argument('outfilename', type=str, help='Recoded media file', nargs='?')
 
     args = parser.parse_args()
 
+    logLevels = {
+        0: logging.ERROR,
+        1: logging.WARNING,
+        2: logging.INFO,
+        3: logging.DEBUG
+    }
+
+    parameters = config.get_values()
+
+    if args.verbose == 0:
+        logLevel = parameters['logging']['level']
+    else:
+        logLevel = logLevels[min(args.verbose, 3)]
+
+    logHandlers = []
+    if parameters['logging']['to_file']:
+        logHandlers.append(logging.FileHandler(parameters['logging']['file_path']))
+    if parameters['logging']['to_console']:
+        logHandlers.append(logging.StreamHandler())
+
+    logging.basicConfig(
+        encoding='utf-8',
+        format=parameters['logging']['format'],
+        level=logLevel,
+        handlers=logHandlers
+    )
+
+    logging.debug(f"arguments: {args}")
+    logging.debug(f"parameters: {parameters}")
+
     input_file = args.filename
+
+    logging.debug(f"input_file: {input_file}")
 
     if args.outfilename:
         output_file = args.outfilename
@@ -236,12 +267,14 @@ if __name__ == "__main__":
             parameters['files']['output']['extension']
         )
 
+    logging.debug(f"output_file: {output_file}")
+
     if not os.path.exists(input_file):
-        print("File '{}' does not exist".format(input_file), file=sys.stderr)
+        logging.error("File '{}' does not exist".format(input_file))
         exit(1)
 
     if os.path.exists(output_file) and not args.force:
-        print("File '{}' already exists".format(output_file), file=sys.stderr)
+        logging.error("File '{}' already exists".format(output_file))
         exit(1)
 
     ffmpeg_parameters = get_ffmpeg_parameters(input_file, parameters['recoding'])
@@ -251,8 +284,7 @@ if __name__ == "__main__":
     if args.force:
         ffmpeg_command = ffmpeg_command + ' -y'
 
-    if args.verbose:
-        print("\nCall this command:\n{}\n".format(ffmpeg_command))
+    logging.info(f"command: {ffmpeg_command}")
 
     if not args.dry_run:
         result = subprocess.run(ffmpeg_command, shell=True, capture_output=True, text=True)
