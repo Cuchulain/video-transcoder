@@ -219,6 +219,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-n', '--dry-run', action='store_true', help='Only display the command, don\'t recode')
     parser.add_argument('-f', '--force', action='store_true', help='Rewrite output file if it already exists')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
     parser.add_argument('filename', type=str, help='Media file to recode')
     parser.add_argument('outfilename', type=str, help='Recoded media file', nargs='?')
 
@@ -236,11 +237,11 @@ if __name__ == "__main__":
         )
 
     if not os.path.exists(input_file):
-        print("File '{}' does not exist".format(input_file))
+        print("File '{}' does not exist".format(input_file), file=sys.stderr)
         exit(1)
 
     if os.path.exists(output_file) and not args.force:
-        print("File '{}' already exists".format(output_file))
+        print("File '{}' already exists".format(output_file), file=sys.stderr)
         exit(1)
 
     ffmpeg_parameters = get_ffmpeg_parameters(input_file, parameters['recoding'])
@@ -250,7 +251,8 @@ if __name__ == "__main__":
     if args.force:
         ffmpeg_command = ffmpeg_command + ' -y'
 
-    print("\nCall this command:\n{}\n".format(ffmpeg_command))
+    if args.verbose:
+        print("\nCall this command:\n{}\n".format(ffmpeg_command))
 
     if not args.dry_run:
         result = subprocess.run(ffmpeg_command, shell=True, capture_output=True, text=True)
