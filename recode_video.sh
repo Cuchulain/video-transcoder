@@ -3,4 +3,9 @@
 script_path=$(readlink -f "$0")
 dir=$(dirname "$script_path")
 
-"$dir/venv/bin/python3" "$dir/recode_video.py" "$@"
+interpret="$dir/venv/bin/python3"
+if [ ! -f "$interpret" ]; then
+  interpret="python3"
+fi
+
+"$interpret" "$dir/recode_video.py" "$@"

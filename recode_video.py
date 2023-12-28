@@ -13,7 +13,7 @@
 
 import json
 import os
-import pipes
+from shlex import quote
 import platform
 import subprocess
 import sys
@@ -207,7 +207,7 @@ def get_command(command, file_path):
     if str(platform.system()) == 'Windows':
         cmd = command.split(' ').append(file_path)
     else:
-        cmd = [command + ' ' + pipes.quote(file_path)]
+        cmd = [command + ' ' + quote(file_path)]
 
     return cmd
 
