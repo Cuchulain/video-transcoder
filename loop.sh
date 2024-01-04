@@ -21,14 +21,14 @@ process_video_files() {
     find "$SOURCE_DIR" -type f -not -name "$IGNORE_MASK" | while read -r file; do
         # Change the path for the output directory
         local relative_path="${file#$SOURCE_DIR/}"
-        local dest_file="$DEST_DIR/$relative_path"
+        local dest_path="$DEST_DIR/$relative_path" # Keep the relative path in the destination path
+        local dest_path_recoded="${dest_path%.*}.$DEST_EXTENSION" # Generate destination file with desired extension
 
         # Check if the output file already exists
-        if [ ! -f "$dest_file" ]; then
+        if [ ! -f "$dest_path_recoded" ]; then
             # Check if the file is a video using ffprobe
             if ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 "$file" > /dev/null; then
                 # Create a temporary file with the appropriate extension
-                # shellcheck disable=SC2155
                 local temp_file=$(mktemp "/tmp/recoded_video.XXXXXX.$DEST_EXTENSION")
 
                 echo "Recode $file to $temp_file"
@@ -37,16 +37,17 @@ process_video_files() {
 
                 # Move the temporary file to the target location only if recode_video exits with status code 0
                 if [ $? -eq 0 ]; then
-                    echo "Move $temp_file to $dest_file"
-                    mkdir -p "$(dirname "$dest_file")"
-                    mv "$temp_file" "$dest_file"
+                    echo "Move $temp_file to $dest_path_recoded"
+                    mkdir -p "$(dirname "$dest_path_recoded")"
+                    mv "$temp_file" "$dest_path_recoded"
                 else
                     echo "Error in recoding video: $file"
                     rm "$temp_file" # Remove the temporary file if recoding failed
                 fi
             else
-                echo "Copy $file to $dest_file"
-                cp "$file" "$dest_file"
+                echo "Copy $file to $dest_path"
+                mkdir -p "$(dirname "$dest_path")"
+                cp "$file" "$dest_path"
             fi
         fi
     done
